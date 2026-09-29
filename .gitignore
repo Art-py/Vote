@@ -1,0 +1,35 @@
+# Python bytecode and build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual environments and local configuration
+.venv/
+.env
+.env.*
+!.env.example
+
+# Django runtime files
+*.log
+*.sqlite3
+media/
+staticfiles/
+
+# Celery runtime files
+celerybeat-schedule*
+celerybeat.pid
+
+# Test and analysis caches
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
