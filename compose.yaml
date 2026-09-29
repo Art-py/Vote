@@ -1,0 +1,80 @@
+name: vote
+
+x-app-environment: &app-environment
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-development-only}
+  DJANGO_DEBUG: ${DJANGO_DEBUG:-1}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+  POSTGRES_DB: ${POSTGRES_DB:-vote}
+  POSTGRES_USER: ${POSTGRES_USER:-vote}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vote}
+  POSTGRES_HOST: db
+  POSTGRES_PORT: 5432
+  CELERY_BROKER_URL: redis://redis:6379/0
+  EMAIL_HOST: mailpit
+  EMAIL_PORT: 1025
+  EMAIL_USE_TLS: 0
+  DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-vote@example.test}
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vote}
+      POSTGRES_USER: ${POSTGRES_USER:-vote}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vote}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vote} -d ${POSTGRES_DB:-vote}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_WEB_PORT:-8025}:8025"
+
+  web:
+    build: .
+    environment: *app-environment
+    command: >-
+      sh -c "python manage.py migrate &&
+      python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "127.0.0.1:${DJANGO_PORT:-8080}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    environment: *app-environment
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
