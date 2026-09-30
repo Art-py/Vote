@@ -1,8 +1,6 @@
 """Admin registrations for the votings application."""
 
 from django.contrib import admin
-from django.db.models import Count, IntegerField, Max, Sum, Value
-from django.db.models.functions import Coalesce
 
 from .choices import VotingStatus
 from .models import Character, Participation, Voting
@@ -53,37 +51,21 @@ class VotingAdmin(admin.ModelAdmin):
     inlines = (ParticipationInline,)
 
     def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .annotate(
-                _admin_participant_count=Count("participations"),
-                _admin_total_votes=Coalesce(
-                    Sum("participations__vote_count"),
-                    Value(0),
-                    output_field=IntegerField(),
-                ),
-                _admin_max_vote_count=Coalesce(
-                    Max("participations__vote_count"),
-                    Value(0),
-                    output_field=IntegerField(),
-                ),
-            )
-        )
+        return super().get_queryset(request).with_stats()
 
     @admin.display(description="Статус")
     def status_display(self, obj: Voting | None) -> str:
-        if obj is None:
+        if obj is None or obj.start_date is None or obj.end_date is None:
             return "—"
         return VotingStatus(obj.status).label
 
-    @admin.display(description="Участников", ordering="_admin_participant_count")
+    @admin.display(description="Участников", ordering="participant_count")
     def participant_count_display(self, obj: Voting | None) -> int:
-        return obj.participant_count if obj is not None else 0
+        return getattr(obj, "participant_count", 0)
 
-    @admin.display(description="Всего голосов", ordering="_admin_total_votes")
+    @admin.display(description="Всего голосов", ordering="total_votes")
     def total_votes_display(self, obj: Voting | None) -> int:
-        return obj.total_votes if obj is not None else 0
+        return getattr(obj, "total_votes", 0)
 
 
 @admin.register(Character)

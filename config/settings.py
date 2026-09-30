@@ -79,8 +79,7 @@ DATABASES = {
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": (
-            "django.contrib.auth.password_validation."
-            "UserAttributeSimilarityValidator"
+            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
         )
     },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -104,12 +103,18 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    "EXCEPTION_HANDLER": "votings.exceptions.api_exception_handler",
 }
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Vote API",
     "DESCRIPTION": "API сервиса голосований за персонажей.",
     "VERSION": "1.0.0",
+    "ENUM_NAME_OVERRIDES": {
+        "VotingStatus": "votings.choices.VotingStatus.choices",
+    },
 }
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")

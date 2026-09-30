@@ -3,10 +3,11 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import Max, QuerySet, Sum
+from django.db.models import Max, QuerySet
 from django.utils import timezone
 
 from .choices import VotingStatus
+from .querysets import VotingQuerySet
 
 
 class Character(models.Model):
@@ -66,6 +67,7 @@ class Voting(models.Model):
         related_name="votings",
         verbose_name="персонажи",
     )
+    objects = VotingQuerySet.as_manager()
 
     class Meta:
         ordering = ("-start_date", "-pk")
@@ -93,8 +95,8 @@ class Voting(models.Model):
             )
 
     def _maximum_vote_count(self) -> int:
-        if hasattr(self, "_admin_max_vote_count"):
-            return self._admin_max_vote_count
+        if hasattr(self, "max_vote_count"):
+            return self.max_vote_count
         if not self.pk:
             return 0
         return (
@@ -120,22 +122,6 @@ class Voting(models.Model):
     @property
     def is_active(self) -> bool:
         return self.status == VotingStatus.ACTIVE
-
-    @property
-    def participant_count(self) -> int:
-        if hasattr(self, "_admin_participant_count"):
-            return self._admin_participant_count
-        if not self.pk:
-            return 0
-        return self.participations.count()
-
-    @property
-    def total_votes(self) -> int:
-        if hasattr(self, "_admin_total_votes"):
-            return self._admin_total_votes
-        if not self.pk:
-            return 0
-        return self.participations.aggregate(total=Sum("vote_count"))["total"] or 0
 
     def get_winners(self) -> QuerySet["Participation"]:
         """Return all leaders of a finished voting, excluding a zero-vote tie."""
